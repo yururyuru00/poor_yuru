@@ -1,0 +1,44 @@
+#!/usr/bin/env python
+# coding: utf-8
+
+# In[ ]:
+
+
+get_ipython().run_line_magic('matplotlib', 'inline')
+
+
+# 
+# # Karate Club
+# 
+# 
+# Zachary's Karate Club graph
+# 
+# Data file from:
+# http://vlado.fmf.uni-lj.si/pub/networks/data/Ucinet/UciData.htm
+# 
+# Reference:
+# Zachary W. (1977).
+# An information flow model for conflict and fission in small groups.
+# Journal of Anthropological Research, 33, 452-473.
+# 
+
+# In[2]:
+
+
+import matplotlib.pyplot as plt
+import networkx as nx
+
+G = nx.karate_club_graph()
+print("Node Degree")
+for v in G:
+    print('%s %s' % (v, G.degree(v)))
+
+nx.draw_circular(G, with_labels=True)
+plt.show()
+
+
+# In[ ]:
+
+
+
+
