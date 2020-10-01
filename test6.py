@@ -1,6 +1,5 @@
 import numpy as np
 
-a = np.arange(2)
+a = {1, 2, 3}
+print(type(a))
 print(a)
-a_roll = np.roll(a, 1)
-print(a_roll)
