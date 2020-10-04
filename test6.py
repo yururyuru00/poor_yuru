@@ -1,5 +1,4 @@
 import numpy as np
+import torch
 
-a = {1, 2, 3, 4}
-print(type(a))
-print(a)
+print(torch.tensor([10, 0]))
