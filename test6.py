@@ -8,4 +8,4 @@ dataset = Planetoid(root='./data/experiment/', name='Cora')
 data = dataset[0]
 print(type(data.x))
 print(data.y)
-data.x = torch.nn.functional.one_hot(data.y, torch.max(data.y)+1).double()
+data.x = torch.nn.functional.one_hot(data.y, torch.max(data.y)+1).float()
