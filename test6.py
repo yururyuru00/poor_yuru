@@ -2,61 +2,88 @@ from torch_geometric import utils
 import torch
 from torch_geometric.datasets import Planetoid
 import numpy as np
-from gensim import models
-from sklearn.tree import DecisionTreeClassifier, export_graphviz
-from sklearn.externals.six import StringIO
-import pydotplus
-from IPython.display import Image
+from sklearn.tree import DecisionTreeClassifier
+from scipy.sparse.linalg import eigsh
+from sklearn.cluster import KMeans
+import sklearn.metrics.cluster as clus
+
+
+def normalized(mat):
+    for i in range(len(mat)):
+        sum_ = np.sum(mat[i])
+        for j in range(len(mat[i])):
+            if(sum_ == 0):
+                mat[i][j] = 0.
+            else:
+                mat[i][j] = mat[i][j] / sum_
+
+
+def makeLaplacian(mat):
+    L = np.zeros((len(mat), len(mat[0])))
+    for d in range(len(mat)):
+        for i in range(len(mat)):
+            L[d][d] += (mat[i][d] + mat[d][i])
+        L[d][d] = L[d][d]/2.0
+    for i in range(len(L)):
+        for j in range(len(L[0])):
+            L[i][j] -= (mat[i][j]+mat[j][i])/2.
+    return L
+
+
+def makeNormLaplacian(mat):
+    L = makeLaplacian(mat)
+    d = np.zeros(len(mat))
+    for i in range(len(mat)):
+        for j in range(len(mat[i])):
+            d[i] += (mat[i][j] + mat[j][i])
+        d[i] = d[i] / 2.
+    for i in range(len(L)):
+        for j in range(len(L[i])):
+            if(d[i] == 0 or d[j] == 0):
+                L[i][j] = 0.
+            else:
+                L[i][j] = (1./np.sqrt(d[i])) * L[i][j] * (1./np.sqrt(d[j]))
+    return L
+
+
+def makeKnn(mat, k):
+    knnmat = np.zeros((len(mat), len(mat[0])))
+    for i in range(len(mat)):
+        arg = np.argsort(-mat[i])
+        for top in range(k):
+            knnmat[i][arg[top]] = mat[i][arg[top]]
+    return knnmat
 
 
 dataset = Planetoid(root='./data/experiment/', name='Cora')
 data = dataset[0]
 
-clf = DecisionTreeClassifier(max_depth=5)
-clf = clf.fit(data.x, data.y)
-f_importance = clf.feature_importances_
-print(f_importance)
+obj_size = data.x.size()[0]
+features = data.x.cpu().detach().numpy().copy()
+S1 = np.zeros((obj_size, obj_size))
+for i in range(obj_size):
+    for j in range(i+1, obj_size):
+        S1[i][j] = np.dot(features[i], features[j]) / \
+            (np.linalg.norm(features[i]) * np.linalg.norm(features[j]))
+        S1[j][i] = S1[i][j]
+for d in range(len(S1)):
+    S1[d][d] = 0.
 
-'''dot_data = StringIO()  # dotファイル情報の格納先
-export_graphviz(clf, out_file=dot_data,
-                feature_names=["high", "size", "autolock"],  # 編集するのはここ
-                class_names=['0', '1', '2', '3', '4', '5', '6'],
-                filled=True, rounded=True,
-                special_characters=True)
-graph = pydotplus.graph_from_dot_data(dot_data.getvalue())
-Image(graph.create_png())'''
+S1 = makeKnn(S1, 80)
+normalized(S1)
 
-'''n_class = torch.max(data.y)+1
-n_dim = data.x.size()[1]
-X = np.zeros((n_class, n_dim))
-for id, obj in enumerate(data.x):
-    X[data.y[id]] += obj.cpu().detach().numpy().copy()
-X = X.T
+S2 = utils.to_dense_adj(data.edge_index)[0]
+S2 = S2.cpu().detach().numpy().copy()
+normalized(S2)
 
-print(X)
-print(np.shape(X))'''
+S = (S1+S2)/2.
 
-'''corpus = []
-for vec in X.T:
-    mini_corpus = []
-    for word_id, word_freq in enumerate(vec):
-        if(word_freq > 0):
-            mini_corpus.append((word_id, word_freq))
-    corpus.append(mini_corpus)
+Ls = makeNormLaplacian(S)
+eigen_val, eigen_vec = eigsh(Ls, 7, which="SM")
 
-
-# tfidf modelの生成
-test_model = models.TfidfModel(corpus)
-
-# corpusへのモデル適用
-corpus_tfidf = test_model[corpus]
-
-# 表示
-print('===結果表示===')
-X_tfidf = np.zeros((n_class, n_dim))
-for clus_id, clus in enumerate(corpus_tfidf):
-    for (word_id, tfidf_score) in clus:
-        X_tfidf[clus_id][word_id] = tfidf_score
-print(X_tfidf)
-print(np.shape(X_tfidf))
-'''
+k_means = KMeans(n_clusters=7, n_init=10, tol=0.0000001)
+k_means.fit(eigen_vec)
+labels = data.y.cpu().detach().numpy().copy()
+print(clus.adjusted_rand_score(labels, k_means.labels_))
+print(clus.adjusted_mutual_info_score(
+    labels, k_means.labels_, "arithmetic"))
