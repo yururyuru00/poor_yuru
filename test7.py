@@ -12,13 +12,32 @@ import itertools
 import matplotlib.pyplot as plt
 import networkx as nx
 
-from ..DeepGraphClustering.utilities import ExtractAttribute, Mask, spectral_clustering
 
 
-device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+class Image(object):
+    def __init__(self):
+        self._width = 300
+        self._height = 400
 
-dataset = Planetoid(root='./data/experiment/', name='Cora',
-                    transform=(ExtractAttribute(7, 8), Mask(0.15, 0.15)))
-data = dataset[0].to(device)
+    @property
+    def width(self):
+        return self._width
 
-print(data)
+    @width.setter
+    def width(self, width):
+        self._width = width
+
+    @property
+    def height(self):
+        return self._height
+
+    @height.setter
+    def height(self, height):
+        self._height = height
+
+if __name__ == '__main__':
+    img = Image()
+    img.width = 200
+    img.height = 100
+    print(img.width)
+    print(img.height)
