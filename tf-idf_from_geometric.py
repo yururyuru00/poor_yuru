@@ -19,6 +19,13 @@ from gensim import models
 
 # from utilities import ExtractAttribute, MaskGraph, spectral_clustering
 
+
+dataset = Planetoid(root='./data/experiment/', name='Cora')
+features = dataset[0].x.cuda().cpu().detach().numpy().copy()
+features = features.astype(np.float32)
+edge_index = dataset[0].edge_index.cuda().cpu().detach().numpy().copy()
+labels = dataset[0].y.cuda().cpu().detach().numpy().copy()
+
 corpuses = []
 for vec in features:
     corpus = []
